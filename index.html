@@ -105,6 +105,7 @@
         <button id="downloadCard" class="btn btn-ghost small">Download Profile Card</button>
         <div id="qrcode" style="background:#fff;padding:6px;border-radius:6px"></div>
       </div>
+      <small style="display:block;margin-top:8px;color:var(--muted)">Share this QR code with your friends!</small>
     </div>
   </form>
 </div>
@@ -134,16 +135,16 @@
 </div>
 
 <audio id="bgMusic" loop crossorigin="anonymous">
-    <source src="MUSIC_URL_HERE" type="audio/mpeg">
+    <source src="" type="audio/mpeg">
   Your browser doesn't support the audio element.
 </audio>
 
 <script>
 /* ======================
-   CONFIG - change these
+   CONFIG - YOUR DEPLOYED URL
    ====================== */
-const G_SCRIPT = "https://script.google.com/macros/s/AKfycbz_Xu0Tqbfqt8Bbj3MDcSBBh_dXtxsZxoL1YHSIdtsl6mab3Z8Pj1b6HHBhjjdoe3VG/exec"; // <<-- REPLACE with your deployed Apps Script URL
-const MUSIC_URL = "MUSIC_URL_HERE"; // REPLACE or leave as-is (blank)
+const G_SCRIPT = "https://script.google.com/macros/s/AKfycbz_Xu0Tqbfqt8Bbj3MDcSBBh_dXtxsZxoL1YHSIdtsl6mab3Z8Pj1b6HHBhjjdoe3VG/exec"; // <<-- YOUR URL ADDED HERE
+const MUSIC_URL = ""; // Add URL for background music if desired
 const SITE_URL = window.location.href;
 
 /* ======================
@@ -171,7 +172,7 @@ const bgMusic = document.getElementById('bgMusic');
 let userLat="", userLon="", userCity="";
 let map, markersGroup;
 let universeOn = true;
-let submissionsCache = []; // <-- Cached data for efficient star remapping
+let submissionsCache = []; 
 
 /* ======================
    Map init (Leaflet)
@@ -197,7 +198,7 @@ async function loadSubmissions(){
   try{
     const res = await fetch(`${G_SCRIPT}?mode=GET`);
     const data = await res.json();
-    submissionsCache = data; // Update the global cache
+    submissionsCache = data; 
     markersGroup.clearLayers();
     let total=0, cityCount=0;
     data.forEach(e=>{
@@ -245,6 +246,8 @@ function createPopupCard(entry){
 /* ======================
    Detect Location & reverse geocode
    ====================== */
+detectBtn.addEventListener('click', () => detectLocation(true));
+
 async function detectLocation(showPrompt=true){
   if(!navigator.geolocation){ locationMsg.textContent = "Geolocation not supported"; return; }
   if(showPrompt) locationMsg.textContent = "Requesting location (browser prompt)…";
@@ -252,11 +255,14 @@ async function detectLocation(showPrompt=true){
     userLat = pos.coords.latitude; userLon = pos.coords.longitude;
     locationMsg.textContent = "Thanks for allowing location! 🎉";
     try{
+      // OpenStreetMap Nominatim for reverse geocoding
       const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${userLat}&lon=${userLon}`);
       const json = await r.json();
       userCity = json.address.city || json.address.town || json.address.village || json.address.county || '';
       if(userCity) locationMsg.innerHTML = `You're in <strong>${escapeHtml(userCity)}</strong>. Share your memory!`;
       else locationMsg.textContent = "Location detected (city not found).";
+      
+      // Add User marker
       const marker = L.marker([userLat,userLon], {icon: glowIcon}).addTo(markersGroup);
       marker.bindPopup(`You are here: ${escapeHtml(userCity||'Your location')}`).openPopup();
       map.setView([userLat,userLon], Math.max(5, userCity?6:4));
@@ -275,7 +281,6 @@ async function detectLocation(showPrompt=true){
    Scoring / AI heuristics
    ====================== */
 function computeScore(durationText, feelingsText){
-  // parse numeric time (prioritize years)
   let years = 0;
   if(durationText){
     const txt = durationText.toLowerCase();
@@ -283,8 +288,7 @@ function computeScore(durationText, feelingsText){
     if(m){ const n = parseFloat(m[1]); years = txt.includes('month')? n/12 : n; }
     else { if(txt.includes('few')) years = 0.5; }
   }
-  // length and positivity score
-  const lenScore = Math.min(20, (feelingsText||'').length / 5); // up to 20
+  const lenScore = Math.min(20, (feelingsText||'').length / 5); 
   const posWords = ['love','best','always','forever','amazing','great','awesome','closest','sweet','happy','care','cherish','grateful','thank'];
   const negWords = ['hate','never','angry','sad','boring','bad','distant','left','lost'];
   const low = (feelingsText||'').toLowerCase();
@@ -292,7 +296,6 @@ function computeScore(durationText, feelingsText){
   posWords.forEach(w=>{ if(low.includes(w)) pos++ });
   negWords.forEach(w=>{ if(low.includes(w)) neg++ });
   const sentiment = Math.max(0, pos - neg);
-  // final composite
   let score = Math.round(Math.min(100, years*12 + lenScore + sentiment*8 + Math.min(15, pos*3)));
   return {score, years, pos, neg};
 }
@@ -311,7 +314,6 @@ document.getElementById('friendForm').addEventListener('submit', async (ev)=>{
   ev.preventDefault();
   showLoading(true);
 
-  // pulse effect
   submitBtn.classList.add('pulse');
   setTimeout(()=> submitBtn.classList.remove('pulse'), 800);
 
@@ -320,13 +322,11 @@ document.getElementById('friendForm').addEventListener('submit', async (ev)=>{
   const duration = document.getElementById('duration').value.trim();
   const feelings = document.getElementById('feelings').value.trim();
 
-  // score & badge
   const result = computeScore(duration, feelings);
   scoreVal.textContent = result.score;
   const badgeText = pickBadge(result.score, result.years);
   badgeSlot.innerHTML = `<span class="badge">${escapeHtml(badgeText)}</span>`;
 
-  // timeline quick add
   addTimelineEntry({name,metAt,duration,feelings,city:userCity,ts:new Date().toISOString()});
 
   const payload = { name, met:metAt, duration, feelings, latitude: userLat, longitude: userLon, city: userCity, timestamp: new Date().toISOString() };
@@ -335,20 +335,18 @@ document.getElementById('friendForm').addEventListener('submit', async (ev)=>{
     // POST JSON
     await fetch(G_SCRIPT, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
 
-    // reload markers (updates cache and calls updateMapStars)
+    // Reload markers (updates cache and calls updateMapStars)
     await loadSubmissions();
 
-    // confetti
+    // Confetti effect
     confetti({ particleCount: 180, spread: 70, origin: { y: 0.6 } });
 
-    // build profile card and QR
+    // Build profile card and QR
     buildProfileCard({ name, metAt, duration, feelings, badge: badgeText });
-    // Re-generate QR code for the page, just in case
     qrcodeEl.innerHTML = '';
     new QRCode(qrcodeEl, { text: SITE_URL, width: 96, height: 96 });
 
     showLoading(false);
-    // success microcopy
     const successMsg = `Thanks ${name}! Your memory is live.`; 
     alert(successMsg);
   } catch(err){
@@ -357,7 +355,6 @@ document.getElementById('friendForm').addEventListener('submit', async (ev)=>{
     alert("Submit failed — check Apps Script and CORS.");
   }
 
-  // reset form fields (keep city & starfield)
   document.getElementById('friendForm').reset();
 });
 
@@ -403,7 +400,7 @@ function drawParticles(){
 
 let starData = [];
 
-// REFACTORED: Only update star coordinates on screen using current map position
+// EFFICIENT: Update star coordinates on screen using current map position (cached data)
 function updateMapStars(entries){
   starData = [];
   if (!map) return;
@@ -412,15 +409,14 @@ function updateMapStars(entries){
     const lat = safeNum(e.latitude), lon = safeNum(e.longitude);
     if(lat && lon){
       try{
-        // Convert Lat/Lon to screen coordinates relative to the map container
         const point = map.latLngToContainerPoint([lat,lon]);
         starData.push({
-          x: point.x + (Math.random()*40-20), // Scatter effect
-          y: point.y + (Math.random()*40-20), // Scatter effect
+          x: point.x + (Math.random()*40-20), 
+          y: point.y + (Math.random()*40-20), 
           size: 1+Math.random()*2, 
           alpha: 0.8
         });
-      }catch(err){}
+      }catch(err){ console.warn("Star mapping failed", err); }
     }
   });
 }
@@ -428,25 +424,27 @@ function updateMapStars(entries){
 function drawStars(){
   sp.clearRect(0,0,W,H);
   if(!universeOn) return;
-  // subtle scatter
+  
+  // Subtle background scatter
   for(let i=0;i<60;i++){ sp.beginPath(); const x=(i*137)%W, y=(i*97)%H; sp.globalAlpha=0.06; sp.fillStyle='#ffffff'; sp.arc(x,y,Math.random()*1.6,0,Math.PI*2); sp.fill(); }
   
-  // starData on map
-  const rect = map._container.getBoundingClientRect();
-  starData.forEach(s=>{
-    // Convert map-relative coordinates to screen-relative coordinates
-    const vx = rect.left + s.x, vy = rect.top + s.y;
-    sp.beginPath(); sp.globalAlpha = s.alpha; sp.fillStyle = 'rgba(123,208,255,0.9)'; sp.arc(vx,vy,s.size*1.6,0,Math.PI*2); sp.fill();
-  });
+  // Draw the stars based on the remapped screen coordinates
+  if (map && map._container) {
+    const rect = map._container.getBoundingClientRect();
+    starData.forEach(s=>{
+        const vx = rect.left + s.x, vy = rect.top + s.y;
+        sp.beginPath(); sp.globalAlpha = s.alpha; sp.fillStyle = 'rgba(123,208,255,0.9)'; sp.arc(vx,vy,s.size*1.6,0,Math.PI*2); sp.fill();
+    });
+  }
 }
 
+// Animation Loop
 (function animate(){ requestAnimationFrame(animate); drawParticles(); drawStars(); })();
 
 /* ======================
    Star remapping on map move (EFFICIENT FIX)
    ====================== */
 map.on('move zoom', ()=> {
-    // Only re-calculate screen coordinates using the existing cached data.
     updateMapStars(submissionsCache);
 });
 
@@ -455,57 +453,68 @@ map.on('move zoom', ()=> {
    ====================== */
 function buildProfileCard({name, metAt, duration, feelings, badge}){
   const ctx = cardCanvas.getContext('2d');
-  // clear
-  ctx.clearRect(0,0,cardCanvas.width,cardCanvas.height);
-  // background
-  const g = ctx.createLinearGradient(0,0,cardCanvas.width,cardCanvas.height); g.addColorStop(0,'#071019'); g.addColorStop(1,'#07201a');
-  ctx.fillStyle = g; ctx.fillRect(0,0,cardCanvas.width,cardCanvas.height);
-  // neon border
-  ctx.strokeStyle = 'rgba(123,208,255,0.12)'; ctx.lineWidth = 2; roundRect(ctx,4,4,cardCanvas.width-8,cardCanvas.height-8,12); ctx.stroke();
-  // title
-  ctx.fillStyle = '#fff'; ctx.font = '18px Poppins,sans-serif'; ctx.fillText(name || 'Anonymous', 20, 36);
-  // badge
-  ctx.fillStyle = '#ffd46b'; ctx.font = '12px Poppins'; ctx.fillText(badge || '', cardCanvas.width - 120, 34);
-  // meta
-  ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.font = '12px Poppins'; ctx.fillText(metAt || '', 20, 64);
+  const Wc = cardCanvas.width;
+  const Hc = cardCanvas.height;
+
+  ctx.clearRect(0,0,Wc,Hc);
+  const g = ctx.createLinearGradient(0,0,Wc,Hc); g.addColorStop(0,'#071019'); g.addColorStop(1,'#07201a');
+  ctx.fillStyle = g; ctx.fillRect(0,0,Wc,Hc);
+  ctx.strokeStyle = 'rgba(123,208,255,0.12)'; ctx.lineWidth = 2; roundRect(ctx,4,4,Wc-8,Hc-8,12); ctx.stroke();
+  
+  ctx.font = '18px Inter, sans-serif'; 
+  ctx.fillStyle = '#fff'; ctx.fillText(name || 'Anonymous', 20, 36);
+  
+  ctx.font = '700 12px Inter'; 
+  ctx.fillStyle = '#ffd46b'; ctx.fillText(badge || '', Wc - 140, 34); 
+  
+  ctx.fillStyle = 'rgba(255,255,255,0.85)'; 
+  ctx.font = '12px Inter'; 
+  ctx.fillText(metAt || '', 20, 64);
   ctx.fillText(duration || '', 20, 82);
-  // feelings block
-  ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = '13px Poppins'; wrapText(ctx, feelings || '', 20, 110, cardCanvas.width - 120, 18);
-  // draw avatar circle
-  ctx.beginPath(); ctx.arc(cardCanvas.width - 50, 110, 28, 0, Math.PI*2); ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fill();
+  
+  ctx.fillStyle = 'rgba(255,255,255,0.9)'; 
+  ctx.font = '13px Inter'; 
+  wrapText(ctx, feelings || 'Your memory here...', 20, 110, Wc - 100, 18); 
+  
+  ctx.beginPath(); ctx.arc(Wc - 50, 110, 28, 0, Math.PI*2); ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fill();
 }
-function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();}
+
+function roundRect(ctx,x,y,w,h,r){ 
+  ctx.beginPath(); ctx.moveTo(x+r,y); 
+  ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); 
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); 
+  ctx.closePath();
+}
 function wrapText(ctx, text, x, y, maxWidth, lineHeight){
   const words = text.split(' ');
   let line = '';
+  let currentY = y;
   for(let n=0;n<words.length;n++){
     const testLine = line + words[n] + ' ';
     const metrics = ctx.measureText(testLine);
     const testWidth = metrics.width;
     if(testWidth > maxWidth && n>0){
-      ctx.fillText(line, x, y);
+      ctx.fillText(line, x, currentY);
       line = words[n] + ' ';
-      y += lineHeight;
+      currentY += lineHeight;
     } else {
       line = testLine;
     }
+    if(currentY > y + lineHeight * 2) break; // Limit to 3 lines
   }
-  ctx.fillText(line, x, y);
+  ctx.fillText(line, x, currentY);
 }
-// download card
+
 downloadCard.addEventListener('click', ()=>{
   const url = cardCanvas.toDataURL('image/png');
   const a = document.createElement('a'); a.href = url; a.download = 'friendship-card.png'; a.click();
 });
 
 /* ======================
-   QR code for page share
+   QR code / Share logic
    ====================== */
 new QRCode(qrcodeEl, { text: SITE_URL, width: 96, height: 96 });
 
-/* ======================
-   Share Button
-   ====================== */
 shareBtn.addEventListener('click', async ()=>{
   const text = "I just shared a friendship memory! Join the Friendship Universe:";
   if(navigator.share){
@@ -516,37 +525,28 @@ shareBtn.addEventListener('click', async ()=>{
 });
 
 /* ======================
-   Theme toggle (persist)
+   Theme & Music
    ====================== */
 function setTheme(theme){ document.body.setAttribute('data-theme', theme); localStorage.setItem('theme', theme); }
 themeToggle.addEventListener('click', ()=> setTheme(document.body.getAttribute('data-theme')==='dark' ? 'light' : 'dark'));
 const saved = localStorage.getItem('theme'); if(saved) setTheme(saved); else setTheme('dark');
 
-/* ======================
-   Music toggle (bg audio)
-   ====================== */
-if(MUSIC_URL && MUSIC_URL !== 'MUSIC_URL_HERE'){ bgMusic.src = MUSIC_URL; }
+if(MUSIC_URL){ bgMusic.src = MUSIC_URL; }
 musicToggle.addEventListener('click', ()=>{
   if(bgMusic.paused){ bgMusic.play().catch(()=>{}); musicToggle.textContent = '🔈 Music On'; }
   else { bgMusic.pause(); musicToggle.textContent = '🔇 Music Off'; }
 });
 
 /* ======================
-   Load initial data and polling
+   Initialization & Utility
    ====================== */
 loadSubmissions();
-// Polling for new data every 20 seconds
-setInterval(loadSubmissions, 20000);
+setInterval(loadSubmissions, 20000); // Poll for new data every 20 seconds
 
-/* ======================
-   Utility helpers
-   ====================== */
 document.getElementById('recenterBtn').addEventListener('click', ()=> map.setView([20,0],2));
 document.getElementById('refreshBtn').addEventListener('click', ()=> loadSubmissions());
 
-/* ======================
-   Initial small build of card
-   ====================== */
+// Initial card preview
 buildProfileCard({ name:'Your Name', metAt:'Meeting place', duration:'X years', feelings:'Your memory here...', badge:'New Companion' });
 
 </script>

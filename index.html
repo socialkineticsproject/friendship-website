@@ -11,7 +11,7 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <style>
-  /* ---------- THEME & LAYOUT ---------- */
+/* ---------- THEME & LAYOUT ---------- */
   :root{
     --bg:#07070a; --card:#0f1113; --muted:#bfc7ce;
     --neon1:#6ef0b6; --neon2:#7bd0ff; --accent:#83f07a;
@@ -21,11 +21,42 @@
     --bg:#f4f7fb; --card:#ffffff; --muted:#475569;
     --neon1:#0ea5a4; --neon2:#06b6d4; --accent:#0ea5a4;
   }
-  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;color: #e6eef3}
-  body{background: radial-gradient(800px 400px at 10% 20%, rgba(123,208,255,0.03), transparent 8%), var(--bg); display:flex; gap:18px; padding:18px; align-items:flex-start; justify-content:center; overflow:hidden;}
+  
+  /* CRITICAL FIX: Use 100% height and disable overflow on the body */
+  html, body {
+    height: 100%;
+    margin: 0;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    color: #e6eef3;
+    /* Prevent scrolling unless absolutely necessary */
+    overflow: hidden;
+  }
+  
+  /* CRITICAL FIX: Main body uses flexbox to position children horizontally */
+  body {
+    background: radial-gradient(800px 400px at 10% 20%, rgba(123,208,255,0.03), transparent 8%), var(--bg);
+    display: flex; 
+    gap: 18px; 
+    padding: 18px; 
+    align-items: stretch; /* Stretch children (card and map) to fill height */
+    justify-content: center;
+    box-sizing: border-box;
+    height: 100vh; /* Use viewport height */
+  }
 
   /* Container / Card */
-  .card{width:420px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:14px;padding:18px;box-shadow:0 12px 36px rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.02);backdrop-filter: blur(6px)}
+  .card{
+    width: 420px;
+    /* CRITICAL FIX: Allow card to grow but set maximum height to prevent overflow */
+    height: 100%; 
+    overflow-y: auto; /* Scroll card content if too tall */
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); 
+    border-radius:14px;
+    padding:18px;
+    box-shadow:0 12px 36px rgba(0,0,0,0.6);
+    border:1px solid rgba(255,255,255,0.02);
+    backdrop-filter: blur(6px)
+  }
   h1{margin:0 0 6px;font-size:20px}
   .muted{color:var(--muted);font-size:13px}
 
@@ -40,12 +71,20 @@
   .muteline{color:var(--muted); font-size:13px}
 
   /* map */
-  #mapWrap{width:760px; height:620px;border-radius:12px; overflow:hidden;border:1px solid rgba(255,255,255,0.02); background:#020202}
+  #mapWrap{
+    width: 760px; 
+    /* CRITICAL FIX: Make map take full available height */
+    height: 100%; 
+    border-radius:12px; 
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,0.02); 
+    background:#020202
+  }
   .mapHeader{padding:12px 16px; display:flex; justify-content:space-between; align-items:center; color:var(--muted); background:rgba(255,255,255,0.01)}
   #map{height:calc(100% - 52px)}
 
   /* timeline */
-  .timeline{position:fixed; right:18px; bottom:18px; width:320px; background:rgba(8,8,10,0.9); padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); box-shadow:0 10px 40px rgba(0,0,0,0.6); transform:translateY(140%); transition:transform .4s}
+  .timeline{position:fixed; right:18px; bottom:18px; width:320px; background:rgba(8,8,10,0.9); padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); box-shadow:0 10px 40px rgba(0,0,0,0.6); transform:translateY(140%); transition:transform .4s; z-index: 100;}
   .timeline.show{transform:translateY(0%)}
   .timeline .step{padding:8px;border-radius:8px;margin-top:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01),transparent)}
 
@@ -59,12 +98,18 @@
 
   /* particle canvases */
   #particles, #stars {position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1;opacity:0.9}
-
+  
   /* responsiveness */
   @media (max-width:1100px){
-    body{flex-direction:column;align-items:center;padding:12px}
+    body{
+      flex-direction:column;
+      align-items:center;
+      padding:12px;
+      overflow-y: auto; /* Allow scrolling on smaller screens */
+      height: auto;
+    }
     #mapWrap{width:100%; height:520px}
-    .card{width:100%; max-width:760px}
+    .card{width:100%; max-width:760px; height: auto;}
   }
 </style>
 </head>

@@ -1,183 +1,613 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Friendship Memories</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Friendship Universe — Live</title>
 
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap" rel="stylesheet">
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
-  <style>
-    /* Body & Background */
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      overflow: hidden;
-    }
+<style>
+  /* -------------------------
+     THEME & NEON (X-Factor 1)
+     ------------------------- */
+  :root{
+    --bg:#07070a;
+    --panel: rgba(20,20,22,0.86);
+    --muted: #bfc7ce;
+    --neon1: #6ef0b6; /* green */
+    --neon2: #7bd0ff; /* cyan */
+    --accent:#83f07a;
+    --glass: rgba(255,255,255,0.03);
+  }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+  body{
+    background: radial-gradient(1200px 600px at 10% 20%, rgba(123,208,255,0.04), transparent 8%),
+                radial-gradient(1000px 400px at 90% 80%, rgba(110,240,182,0.03), transparent 6%),
+                var(--bg);
+    color:#e6eef3;
+    display:flex;
+    gap:18px;
+    padding:20px;
+    align-items:flex-start;
+    justify-content:center;
+    overflow:hidden;
+  }
+  /* soft glass card */
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border: 1px solid rgba(110,240,182,0.07);
+    width:420px;
+    border-radius:16px;
+    padding:18px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+    position:relative;
+    z-index:10;
+    backdrop-filter: blur(6px);
+  }
+  h1{margin:4px 0 8px; font-size:18px}
+  .muted{ color:var(--muted); font-size:13px}
 
-    /* Particle background */
-    .particle {
-      position: absolute;
-      width: 4px;
-      height: 4px;
-      background: #0ff;
-      border-radius: 50%;
-      animation: float 10s linear infinite;
-    }
+  /* neon inputs */
+  input[type="text"], textarea {
+    width:100%;
+    padding:12px 12px;
+    border-radius:10px;
+    background: rgba(12,12,14,0.7);
+    border:1px solid rgba(255,255,255,0.03);
+    color:#eaf7ee;
+    font-size:14px;
+    outline:none;
+    transition: box-shadow .15s, transform .12s;
+  }
+  input:focus, textarea:focus {
+    box-shadow: 0 0 18px rgba(123,208,255,0.12), 0 0 36px rgba(110,240,182,0.06);
+    transform: translateY(-2px);
+    border-color: rgba(123,208,255,0.18);
+  }
+  textarea{ min-height:86px; resize:vertical }
 
-    @keyframes float {
-      0% {transform: translateY(0) translateX(0);}
-      50% {transform: translateY(-500px) translateX(200px);}
-      100% {transform: translateY(0) translateX(0);}
-    }
+  .row{display:flex; gap:10px}
+  .field{margin:10px 0}
 
-    /* Glassmorphism Form */
-    .container {
-      position: relative;
-      background: rgba(20,20,20,0.7);
-      backdrop-filter: blur(10px);
-      padding: 40px;
-      border-radius: 20px;
-      width: 90%;
-      max-width: 500px;
-      box-shadow: 0 0 20px #0ff;
-      border: 2px solid #0ff;
-      animation: fadeIn 1.5s ease-in-out;
-      z-index: 1;
-    }
+  /* neon buttons */
+  .btn {
+    padding:12px 14px;
+    border-radius:10px;
+    border:none;
+    cursor:pointer;
+    color:#05110a;
+    font-weight:700;
+    display:inline-flex;align-items:center;gap:8px;
+    transition: transform .12s, box-shadow .12s;
+  }
+  .btn.primary {
+    background: linear-gradient(90deg,var(--neon1),var(--neon2));
+    box-shadow: 0 6px 20px rgba(123,208,255,0.08), 0 0 32px rgba(110,240,182,0.07);
+  }
+  .btn.ghost { background: rgba(255,255,255,0.02); color:var(--muted); border:1px solid rgba(255,255,255,0.02) }
+  .btn.primary:hover { transform: translateY(-4px); box-shadow: 0 10px 34px rgba(110,240,182,0.12) }
 
-    @keyframes fadeIn {
-      0% {opacity: 0; transform: scale(0.8);}
-      100% {opacity: 1; transform: scale(1);}
-    }
+  /* social proof, counters */
+  .socialProof{color:var(--neon1); font-weight:700; margin-top:6px; font-size:13px}
+  .muteline{ color:var(--muted); font-size:13px }
 
-    h2 {
-      font-family: 'Dancing Script', cursive;
-      text-align: center;
-      font-size: 36px;
-      margin-bottom: 20px;
-      color: #0ff;
-      text-shadow: 0 0 10px #0ff;
-      height: 50px;
-      overflow: hidden;
-    }
+  /* success area */
+  .success { margin-top:12px; display:none; padding:10px;border-radius:10px; background: linear-gradient(90deg, rgba(131,240,122,0.06), rgba(123,208,255,0.02)); border:1px solid rgba(131,240,122,0.08) }
 
-    input, textarea, button {
-      width: 100%;
-      margin: 12px 0;
-      padding: 12px;
-      border-radius: 12px;
-      border: none;
-      font-size: 16px;
-      transition: all 0.3s ease;
-    }
+  /* badge */
+  .badge { padding:6px 10px; border-radius:999px; background:linear-gradient(90deg,#ffd46b,#ff8a65); color:#111; font-weight:800; margin-left:8px; font-size:13px }
 
-    input, textarea {
-      background: rgba(30,30,30,0.7);
-      color: #fff;
-    }
+  /* timeline panel (X-Factor 3) */
+  .timeline {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    width:320px;
+    max-width:calc(100% - 36px);
+    background: rgba(8,8,10,0.9);
+    border:1px solid rgba(255,255,255,0.03);
+    padding:14px;
+    border-radius:12px;
+    box-shadow:0 10px 40px rgba(0,0,0,0.6);
+    transform: translateY(140%);
+    transition: transform .48s cubic-bezier(.2,.9,.2,1);
+    z-index:25;
+  }
+  .timeline.show { transform: translateY(0%) }
+  .timeline h3{margin:0 0 6px;font-size:15px}
+  .timeline .step{padding:8px;border-radius:10px;margin-top:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01),transparent)}
 
-    input:focus, textarea:focus {
-      box-shadow: 0 0 10px #0ff;
-      outline: none;
-    }
+  /* right side map container */
+  #mapWrap {
+    width:720px;
+    height:620px;
+    border-radius:14px;
+    overflow:hidden;
+    position:relative;
+    z-index:8;
+    border:1px solid rgba(255,255,255,0.02);
+  }
+  .mapHeader {
+    display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(255,255,255,0.02); color:var(--muted);
+  }
+  #map{ width:100%; height:calc(100% - 52px) }
 
-    button {
-      background: #0ff;
-      color: #000;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 0 10px #0ff;
-    }
+  /* map popup custom card (X-Factor 4) */
+  .popup-card {
+    width:260px; padding:10px; border-radius:12px; background: linear-gradient(180deg,#0b0b0d,#121214);
+    color:#eaf7ee; border:1px solid rgba(123,208,255,0.06);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  }
+  .popup-title { font-weight:800; margin-bottom:6px; color:var(--neon2) }
+  .popup-meta { font-size:12px; color:var(--muted); margin-bottom:8px }
+  .popup-feelings { font-size:13px; color:#d9f7e6 }
 
-    button:hover {
-      box-shadow: 0 0 20px #0ff;
-      transform: scale(1.05);
-    }
+  /* heart pulse */
+  .heart { width:18px;height:18px; display:inline-block; transform-origin:center; transition:transform .18s }
+  .pulse { animation:pulse 800ms ease }
+  @keyframes pulse { 0%{transform:scale(1)}30%{transform:scale(1.55)}60%{transform:scale(1.1)}100%{transform:scale(1)} }
 
-    body::after {
-      content: '';
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      top: 0; left: 0;
-      background: linear-gradient(180deg, rgba(0,255,255,0.1), transparent);
-      pointer-events: none;
-    }
-  </style>
+  /* small top overlay buttons for Universe mode toggle */
+  .topControls { position:absolute; top:10px; left:10px; z-index:40; display:flex; gap:8px }
+  .small { padding:8px 10px; border-radius:10px; font-size:13px }
+
+  /* particles & stars canvas covers - keep behind UI but above bg */
+  #particles, #stars { position:fixed; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:1; }
+
+  /* responsive */
+  @media (max-width:1100px){
+    body{flex-direction:column; padding:12px; align-items:center}
+    #mapWrap{ width:100%; height:520px }
+    .card { width:100%; max-width:720px }
+  }
+</style>
 </head>
-<body onload="autoGetLocation(); startTyping();">
+<body>
 
-  <!-- Particles -->
-  <script>
-    for(let i=0;i<50;i++){
-      let p = document.createElement('div');
-      p.className='particle';
-      p.style.left = Math.random()*100 + '%';
-      p.style.top = Math.random()*100 + '%';
-      document.body.appendChild(p);
-    }
-  </script>
+  <!-- floating particle canvas (X-Factor 2) -->
+  <canvas id="particles"></canvas>
+  <!-- starfield canvas (X-Factor 5, behind map area) -->
+  <canvas id="stars"></canvas>
 
-  <div class="container">
-    <h2 id="header"></h2>
-    <form id="friendForm">
-      <input type="text" id="yourName" placeholder="Your Name" required>
-      <input type="text" id="metAt" placeholder="Where did we meet?" required>
-      <input type="text" id="duration" placeholder="How long we've been friends?" required>
-      <textarea id="feelings" placeholder="How do you feel about our friendship?" required></textarea>
-      <button type="submit">Submit</button>
+  <!-- Form Card -->
+  <div class="card" role="region" aria-label="Friendship form">
+    <h1>Friendship Universe ❤️ <span class="muted">— share a memory</span></h1>
+    <div id="locationMsg" class="muted">Allow location to see friends from your city & unlock the Friendship Universe.</div>
+
+    <form id="friendForm" aria-describedby="locationMsg">
+      <div class="field">
+        <input id="yourName" type="text" placeholder="Your Name (or nickname)" required />
+      </div>
+
+      <div class="field row">
+        <input id="metAt" type="text" placeholder="Where did we meet? (place or event)" required />
+        <input id="duration" type="text" placeholder="How long friends? e.g. '3 years' " required />
+      </div>
+
+      <div class="field">
+        <textarea id="feelings" placeholder="How do you feel about your friendship? (write something sweet!)" required></textarea>
+      </div>
+
+      <div class="field row">
+        <button id="submitBtn" class="btn primary" type="submit" aria-live="polite">
+          <svg class="heart" id="heartIcon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21s-7-4.35-9.2-6.22C-0.88 11.52 3.2 5 8.6 7.64 10.8 8.83 12 12 12 12s1.2-3.17 3.4-4.36C20.8 5 24.88 11.52 21.2 14.78 19 16.65 12 21 12 21z" fill="#05110a"/></svg>
+          Share memory
+        </button>
+        <button id="locButton" type="button" class="btn ghost small">Detect my city</button>
+        <button id="universeToggle" type="button" class="btn ghost small">Toggle Universe</button>
+      </div>
+
+      <div class="field">
+        <div id="socialProof" class="socialProof">—</div>
+      </div>
+
+      <div id="scoreLine" class="muteline">Friendship score: <strong id="scoreVal">—</strong> <span id="badgeSlot"></span></div>
+
+      <div id="successBox" class="success" role="status" aria-live="polite">
+        <div id="successTitle">Thanks — your memory is queued!</div>
+        <div id="successDetails" style="margin-top:8px;"></div>
+      </div>
     </form>
   </div>
 
-  <script>
-    // Typing Animation
-    const headerText = 'Friendship Memories ❤️';
-    let i = 0;
-    function startTyping(){
-      if(i < headerText.length){
-        document.getElementById('header').innerHTML += headerText.charAt(i);
-        i++;
-        setTimeout(startTyping, 150);
-      }
-    }
+  <!-- Map and universe area -->
+  <div id="mapWrap">
+    <div class="mapHeader">
+      <div>
+        <strong>Friendship Map</strong>
+        <div id="mapSub" class="muteline">Live submissions from around the world</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:13px;color:var(--muted)">Total memories: <span id="totalCount" style="font-weight:800">0</span></div>
+        <div style="font-size:13px;color:var(--muted)">From your city: <span id="cityCount" style="font-weight:800">0</span></div>
+      </div>
+    </div>
+    <div id="map"></div>
 
-    // Location Auto Request
-    let userLat='', userLon='';
-    function autoGetLocation(){
-      if(navigator.geolocation){
-        navigator.geolocation.getCurrentPosition(
-          (pos)=>{ userLat=pos.coords.latitude; userLon=pos.coords.longitude; },
-          (err)=>{ console.log('Location denied'); }
-        );
-      }
-    }
+    <!-- small top controls -->
+    <div class="topControls" style="z-index:40">
+      <button id="recenterBtn" class="btn ghost small">Recenter</button>
+      <button id="refreshBtn" class="btn ghost small">Refresh</button>
+    </div>
+  </div>
 
-    // Form Submission
-    document.getElementById('friendForm').addEventListener('submit', function(e){
-      e.preventDefault();
-      const data = {
-        name: document.getElementById('yourName').value,
-        met: document.getElementById('metAt').value,
-        duration: document.getElementById('duration').value,
-        feelings: document.getElementById('feelings').value,
-        latitude: userLat,
-        longitude: userLon
-      };
-      fetch('https://script.google.com/macros/s/AKfycbzIDZ4cCb_MVojw5g8_L6yXI6SOKo2uEfQBBOZ03XskUMSNQtjfPbmWRmIOgF-LXZ4r5A/exec',{
-        method:'POST',
-        mode:'no-cors',
-        body: JSON.stringify(data)
-      });
-      alert('Submitted Successfully!');
-      document.getElementById('friendForm').reset();
+  <!-- Timeline panel (X-Factor 3) -->
+  <div id="timeline" class="timeline" aria-live="polite">
+    <h3>Memory Timeline</h3>
+    <div id="timelineContent"><div class="muteline">No recent activity</div></div>
+  </div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+/* -------------------------
+   Configuration (CHANGE)
+   ------------------------- */
+const G_SCRIPT = "https://script.google.com/macros/library/d/1h7Wfdz2fz2xp07LPsgjG6sFcq2RbOX5VWalwiTOnGX9kaX_f0imsO5rv/1"; // <<-- Replace with your Apps Script web app URL
+
+/* -------------------------
+   Globals & UI refs
+   ------------------------- */
+const locationMsg = document.getElementById('locationMsg');
+const socialProof = document.getElementById('socialProof');
+const scoreVal = document.getElementById('scoreVal');
+const badgeSlot = document.getElementById('badgeSlot');
+const successBox = document.getElementById('successBox');
+const successTitle = document.getElementById('successTitle');
+const successDetails = document.getElementById('successDetails');
+const totalCountEl = document.getElementById('totalCount');
+const cityCountEl = document.getElementById('cityCount');
+const heartIcon = document.getElementById('heartIcon');
+const locButton = document.getElementById('locButton');
+const universeToggle = document.getElementById('universeToggle');
+const timelinePanel = document.getElementById('timeline');
+const timelineContent = document.getElementById('timelineContent');
+
+let userLat = "", userLon = "", userCity = "";
+let universeOn = true;
+
+/* -------------------------
+   Map init
+   ------------------------- */
+const map = L.map('map', {zoomControl:true}).setView([20,0],2);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+const markersGroup = L.layerGroup().addTo(map);
+
+/* custom marker icon (glow) */
+const glowIcon = L.divIcon({
+  className: 'glow-marker',
+  html: `<div style="width:14px;height:14px;border-radius:50%;background:radial-gradient(circle,#7bd0ff, #4ecf9a);box-shadow:0 0 10px rgba(123,208,255,0.6);"></div>`,
+  iconSize:[14,14]
+});
+
+/* -------------------------
+   Small helpers
+   ------------------------- */
+function safeNum(n){ const x = parseFloat(n); return isNaN(x) ? 0 : x; }
+function escapeHtml(s=''){ return String(s).replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function shorten(s,n=120){ if(!s) return ''; return s.length>n ? s.slice(0,n-1)+'…' : s; }
+
+/* -------------------------
+   Load submissions dynamically (GET)
+   ------------------------- */
+async function loadSubmissions(){
+  try {
+    const res = await fetch(`${G_SCRIPT}?mode=GET`);
+    const data = await res.json(); // expect array
+    markersGroup.clearLayers();
+    let total = 0, cityCount = 0;
+    // render markers & populate stars data for starfield
+    data.forEach(e=>{
+      total++;
+      const lat = safeNum(e.latitude), lon = safeNum(e.longitude);
+      const city = e.city || '';
+      if(userCity && city && city.toLowerCase() === userCity.toLowerCase()) cityCount++;
+      if(lat && lon){
+        const popupHtml = createPopupCard(e);
+        L.marker([lat,lon], {icon: glowIcon}).addTo(markersGroup).bindPopup(popupHtml, {maxWidth:300});
+      }
     });
-  </script>
+    totalCountEl.textContent = total;
+    cityCountEl.textContent = cityCount;
+    if(userCity){
+      socialProof.innerHTML = `🔥 <strong>${cityCount}</strong> friends from <strong>${escapeHtml(userCity)}</strong> shared memories — add yours!`;
+    } else {
+      socialProof.textContent = "Be the first from your city — allow location to see more!";
+    }
+    // notify starfield of new data (map-level)
+    updateStarData(data);
+  } catch(err){
+    console.error("loadSubmissions failed", err);
+    socialProof.textContent = "Could not load live data. Check backend & CORS.";
+  }
+}
+
+/* -------------------------
+   Custom popup card (X-Factor 4)
+   ------------------------- */
+function createPopupCard(entry){
+  const name = escapeHtml(entry.name || 'Anonymous');
+  const city = escapeHtml(entry.city || entry.met || '');
+  const feelings = escapeHtml(entry.feelings || '');
+  const when = entry.timestamp ? new Date(entry.timestamp).toLocaleString() : '';
+  const html = `
+    <div class="popup-card">
+      <div class="popup-title">${name}</div>
+      <div class="popup-meta">${city} ${when ? ' • ' + when : ''}</div>
+      <div class="popup-feelings">${shorten(feelings, 220)}</div>
+      <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end;">
+        <button style="padding:6px 8px;border-radius:8px;border:none;background:linear-gradient(90deg,#ff8a65,#ffd46b);font-weight:800;cursor:pointer">❤️</button>
+        <button style="padding:6px 8px;border-radius:8px;border:none;background:rgba(255,255,255,0.03);color:var(--muted);cursor:pointer">😊</button>
+      </div>
+    </div>
+  `;
+  return html;
+}
+
+/* -------------------------
+   Detect location & reverse geocode
+   ------------------------- */
+async function detectLocation(showPrompt=true){
+  if(!navigator.geolocation){ locationMsg.textContent = "Geolocation not supported"; return; }
+  if(showPrompt) locationMsg.textContent = "Requesting location (browser prompt)…";
+  navigator.geolocation.getCurrentPosition(async (pos)=>{
+    userLat = pos.coords.latitude; userLon = pos.coords.longitude;
+    locationMsg.textContent = "Thanks for allowing location! 🎉";
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${userLat}&lon=${userLon}`);
+      const json = await r.json();
+      userCity = json.address.city || json.address.town || json.address.village || json.address.county || '';
+      if(userCity) locationMsg.innerHTML = `You're in <strong>${escapeHtml(userCity)}</strong>. Share your memory!`;
+      else locationMsg.textContent = "Location detected (city not found).";
+      const marker = L.marker([userLat,userLon], {icon: glowIcon}).addTo(markersGroup);
+      marker.bindPopup(`You are here: ${escapeHtml(userCity||'Your location')}`).openPopup();
+      map.setView([userLat,userLon], Math.max(5, userCity ? 6 : 4));
+      await loadSubmissions();
+    } catch(e){
+      console.warn("reverse failed", e);
+      locationMsg.textContent = "Location detected; reverse lookup failed.";
+    }
+  }, (err)=>{
+    console.warn(err);
+    locationMsg.textContent = "Location not enabled. You can still submit!";
+  }, { timeout:10000 });
+}
+locButton.addEventListener('click', ()=> detectLocation(true));
+
+/* -------------------------
+   Scoring & badging (same as before)
+   ------------------------- */
+function computeScore(durationText, feelingsText){
+  let years = 0;
+  if(durationText){
+    const t = durationText.toLowerCase();
+    const m = t.match(/(\d+(\.\d+)?)/);
+    if(m){ const num = parseFloat(m[1]); years = t.includes('month') ? num/12 : num; }
+    else { years = t.includes('few') ? 0.5 : 0; }
+  }
+  const lenScore = Math.min((feelingsText||'').length / 20, 10);
+  const posWords = ['love','best','always','forever','amazing','great','awesome','closest','sweet','happy','care','cherish'];
+  const negWords = ['hate','never','angry','sad','boring','bad','problem','distant'];
+  const low = (feelingsText||'').toLowerCase();
+  let posCount=0, negCount=0; posWords.forEach(w=>{ if(low.includes(w)) posCount++ }); negWords.forEach(w=>{ if(low.includes(w)) negCount++ });
+  const sentiment = Math.max(0,posCount-negCount);
+  let score = Math.round(Math.min(100, years*15 + lenScore*4 + sentiment*8 + Math.min(20, lenScore*2)));
+  return {score, years, posCount, negCount};
+}
+function pickBadge(score, years){
+  if(score >= 80 || years >= 10) return "Legendary Friend";
+  if(score >= 65 || years >= 5) return "Golden Friend";
+  if(score >= 45 || years >= 2) return "Solid Buddy";
+  if(score >= 25) return "Nice Pal";
+  return "New Companion";
+}
+
+/* -------------------------
+   Form submit handling
+   ------------------------- */
+const form = document.getElementById('friendForm');
+form.addEventListener('submit', async (ev)=>{
+  ev.preventDefault();
+  // pulse heart
+  heartIcon.classList.remove('pulse'); void heartIcon.offsetWidth; heartIcon.classList.add('pulse');
+
+  const name = document.getElementById('yourName').value.trim();
+  const metAt = document.getElementById('metAt').value.trim();
+  const duration = document.getElementById('duration').value.trim();
+  const feelings = document.getElementById('feelings').value.trim();
+
+  const result = computeScore(duration, feelings);
+  scoreVal.textContent = result.score;
+  const badge = pickBadge(result.score, result.years);
+  badgeSlot.innerHTML = `<span class="badge">${escapeHtml(badge)}</span>`;
+
+  // immediate timeline update (X-Factor 3)
+  addTimelineEntry({name,metAt,duration,feelings,city:userCity,ts:new Date().toISOString()});
+
+  // optimistic success
+  successBox.style.display = 'block';
+  successTitle.textContent = "Memory queued — sharing to the Universe!";
+  successDetails.innerHTML = `Score <strong>${result.score}</strong> • Badge: <strong>${escapeHtml(badge)}</strong>`;
+
+  const payload = { name, met:metAt, duration, feelings, latitude:userLat, longitude:userLon, city:userCity, timestamp:new Date().toISOString() };
+
+  try {
+    await fetch(G_SCRIPT, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    // refresh map data
+    await loadSubmissions();
+    successTitle.textContent = "Submitted ❤️";
+    successDetails.innerHTML += `<div style="margin-top:8px">Thanks <strong>${escapeHtml(name)}</strong> — your memory is now on the map.</div>`;
+    // supernova effect (X-Factor 5)
+    supernovaAt(userLat,userLon);
+  } catch(err){
+    console.error("submit error", err);
+    successTitle.textContent = "Submit failed";
+    successDetails.innerHTML = "Could not send to backend. Check Apps Script & CORS.";
+  }
+
+  form.reset();
+});
+
+/* -------------------------
+   Timeline (X-Factor 3)
+   ------------------------- */
+function addTimelineEntry(item){
+  const el = document.createElement('div');
+  el.className = 'step';
+  const when = new Date(item.ts).toLocaleString();
+  el.innerHTML = `<strong>${escapeHtml(item.name||'Anonymous')}</strong> — ${escapeHtml(item.metAt||item.city||'Unknown place')} <div class="muteline" style="margin-top:4px;font-size:13px">${shorten(escapeHtml(item.feelings||''),160)}</div><div class="muteline" style="margin-top:6px;font-size:12px">${when}</div>`;
+  timelineContent.prepend(el);
+  timelinePanel.classList.add('show');
+  // auto-hide after 9s
+  setTimeout(()=>{ timelinePanel.classList.remove('show'); }, 9000);
+}
+
+/* -------------------------
+   Polling & UI controls
+   ------------------------- */
+document.getElementById('refreshBtn').addEventListener('click', ()=> loadSubmissions());
+document.getElementById('recenterBtn').addEventListener('click', ()=> map.setView([20,0],2));
+
+/* -------------------------
+   Poll initial & periodic
+   ------------------------- */
+loadSubmissions(); setInterval(loadSubmissions, 20000);
+
+/* -------------------------
+   Simple starfield & star mapping (X-Factor 5)
+   ------------------------- */
+const starsCanvas = document.getElementById('stars'), sp = starsCanvas.getContext('2d');
+const particleCanvas = document.getElementById('particles'), pp = particleCanvas.getContext('2d');
+let W = window.innerWidth, H = window.innerHeight;
+function resizeCanvases(){ W = window.innerWidth; H = window.innerHeight; starsCanvas.width=W; starsCanvas.height=H; particleCanvas.width=W; particleCanvas.height=H; }
+window.addEventListener('resize', resizeCanvases);
+resizeCanvases();
+
+// Particle / fireflies (X-Factor 2)
+const particles = [];
+for(let i=0;i<60;i++){ particles.push({x:Math.random()*W,y:Math.random()*H, vx:(Math.random()-0.5)*0.3, vy:(Math.random()-0.5)*0.3, r:Math.random()*2+0.8, life: Math.random()*100}); }
+let mouse = {x:-9999,y:-9999};
+window.addEventListener('mousemove', e=> { mouse.x = e.clientX; mouse.y = e.clientY; });
+function drawParticles(){
+  pp.clearRect(0,0,W,H);
+  for(const p of particles){
+    p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+    // attract to mouse slightly
+    const dx = mouse.x - p.x, dy = mouse.y - p.y, dist = Math.sqrt(dx*dx+dy*dy);
+    if(dist < 160 && dist>0){ p.x += dx*0.002; p.y += dy*0.002; }
+    if(p.x<0) p.x = W; if(p.x>W) p.x=0; if(p.y<0) p.y=H; if(p.y>H) p.y=0;
+    pp.beginPath();
+    pp.fillStyle = 'rgba(120,210,255,0.8)';
+    pp.globalAlpha = 0.25 + Math.abs(Math.sin(p.life))*0.75;
+    pp.arc(p.x,p.y, p.r, 0, Math.PI*2);
+    pp.fill();
+  }
+  pp.globalAlpha = 1;
+}
+
+// Starfield data representing city friends
+let starData = []; // {x,y,size,alpha,label,lat,lon}
+function updateStarData(entries){
+  // We'll map lat/lon to screen coordinates using Leaflet project if available
+  starData = [];
+  entries.forEach(e=>{
+    const lat = safeNum(e.latitude), lon = safeNum(e.longitude);
+    if(lat && lon){
+      try {
+        const point = map.latLngToContainerPoint([lat,lon]);
+        starData.push({x: point.x + (Math.random()*40 - 20), y: point.y + (Math.random()*40 - 20), size: 1 + Math.min(3, (Math.random()*3)), alpha:0.7, label: e.name||e.city||'Friend', lat, lon, city:e.city});
+      } catch(err){ }
+    }
+  });
+}
+
+// Supernova effect at lat/lon
+function supernovaAt(lat, lon){
+  if(!lat || !lon) return;
+  // project to container point
+  try {
+    const point = map.latLngToContainerPoint([lat,lon]);
+    // create burst particles around point for short time
+    for(let i=0;i<18;i++){
+      particles.push({x: point.x + map._container.getBoundingClientRect().left, y: point.y + map._container.getBoundingClientRect().top, vx:(Math.random()-0.5)*6, vy:(Math.random()-0.5)*6, r:Math.random()*2+1, life: Math.random()*40});
+    }
+  } catch(e){ console.warn("supernova mapping failed", e); }
+}
+
+/* draw stars (overlay on map) */
+function drawStars(){
+  sp.clearRect(0,0,W,H);
+  if(!universeOn) return; // hide when off
+  // subtle background stars
+  for(let i=0;i<60;i++){
+    sp.beginPath();
+    const x = (i*137) % W, y = (i*97) % H;
+    sp.globalAlpha = 0.08;
+    sp.fillStyle = '#ffffff';
+    sp.arc(x,y, Math.random()*1.6,0,Math.PI*2); sp.fill();
+  }
+  // draw starData mapped to map container
+  starData.forEach(s=>{
+    // s.x, s.y are container coordinates relative to map's top-left; convert to viewport coords by adding map container offset
+    const rect = map._container.getBoundingClientRect();
+    const vx = rect.left + s.x, vy = rect.top + s.y;
+    sp.beginPath();
+    sp.globalAlpha = s.alpha;
+    sp.fillStyle = 'rgba(123,208,255,0.9)';
+    const size = s.size * 1.6;
+    sp.arc(vx, vy, size, 0, Math.PI*2);
+    sp.fill();
+    // label small on hover (we won't implement hover detection heavy; simple proximity highlight)
+  });
+}
+
+/* main animation loop */
+(function animate(){
+  requestAnimationFrame(animate);
+  drawParticles();
+  drawStars();
+})();
+
+/* -------------------------
+   Universe toggle (X-Factor 5)
+   ------------------------- */
+universeToggle.addEventListener('click', ()=>{
+  universeOn = !universeOn;
+  document.getElementById('stars').style.opacity = universeOn ? '1' : '0';
+});
+
+/* -------------------------
+   Update star positions when map moves/zooms
+   ------------------------- */
+map.on('move zoom', ()=> {
+  // remap starData from lat/lon to container points
+  // we'll just refresh starData by reloading submissions (cheap)
+  // but ensure we fetch only local mapping if we have entries cached - here we reload submissions
+  loadSubmissions();
+});
+
+/* -------------------------
+   Initialize: detect location gently (no prompt if blocked)
+   ------------------------- */
+window.addEventListener('load', ()=> {
+  detectLocation(false);
+  // set small delay to allow map container to exist for coordinate mapping
+  setTimeout(()=> loadSubmissions(), 600);
+});
+
+/* -------------------------
+   Small accessibility features
+   ------------------------- */
+document.addEventListener('keydown', (e)=> {
+  if(e.key === 'u') { universeToggle.click(); } // quick toggle
+  if(e.key === 'r') { loadSubmissions(); }
+});
+
+</script>
 </body>
 </html>

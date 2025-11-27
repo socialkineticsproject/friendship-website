@@ -1,99 +1,549 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Contact Us</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Friendship Universe — Premium</title>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<!-- QRCode lib -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- Confetti -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 <style>
-  body {
-    font-family: 'Arial', sans-serif;
-    background: #f0f2f5;
-    margin: 0;
-    padding: 0;
+  /* ---------- THEME & LAYOUT ---------- */
+  :root{
+    --bg:#07070a; --card:#0f1113; --muted:#bfc7ce;
+    --neon1:#6ef0b6; --neon2:#7bd0ff; --accent:#83f07a;
+    --glass: rgba(255,255,255,0.03);
   }
-  .container {
-    max-width: 600px;
-    margin: 50px auto;
-    background: #fff;
-    padding: 40px;
-    border-radius: 15px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  [data-theme="light"]{
+    --bg:#f4f7fb; --card:#ffffff; --muted:#475569;
+    --neon1:#0ea5a4; --neon2:#06b6d4; --accent:#0ea5a4;
   }
-  h2 {
-    text-align: center;
-    margin-bottom: 30px;
-    color: #333;
-  }
-  input, textarea {
-    width: 100%;
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    font-size: 16px;
-  }
-  button {
-    background: #007bff;
-    color: white;
-    padding: 15px;
-    width: 100%;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    cursor: pointer;
-  }
-  button:hover {
-    background: #0056b3;
-  }
-  #status {
-    margin-top: 20px;
-    text-align: center;
-    font-weight: bold;
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;color: #e6eef3}
+  body{background: radial-gradient(800px 400px at 10% 20%, rgba(123,208,255,0.03), transparent 8%), var(--bg); display:flex; gap:18px; padding:18px; align-items:flex-start; justify-content:center; overflow:hidden;}
+
+  /* Container / Card */
+  .card{width:420px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:14px;padding:18px;box-shadow:0 12px 36px rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.02);backdrop-filter: blur(6px)}
+  h1{margin:0 0 6px;font-size:20px}
+  .muted{color:var(--muted);font-size:13px}
+
+  input, textarea, button, select { width:100%; padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03); background: rgba(12,12,14,0.65); color:inherit; font-size:14px; box-sizing:border-box; }
+  textarea{min-height:86px; resize:vertical}
+  .row{display:flex;gap:10px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:10px;border:none;cursor:pointer;font-weight:700}
+  .btn-primary{background:linear-gradient(90deg,var(--neon1),var(--neon2)); color:#05110a; box-shadow: 0 8px 30px rgba(110,240,182,0.06)}
+  .btn-ghost{background:rgba(255,255,255,0.03); color:var(--muted)}
+  .small{padding:8px 10px;font-size:13px}
+  .socialProof{color:var(--neon1); font-weight:700; margin-top:8px; font-size:13px}
+  .muteline{color:var(--muted); font-size:13px}
+
+  /* map */
+  #mapWrap{width:760px; height:620px;border-radius:12px; overflow:hidden;border:1px solid rgba(255,255,255,0.02); background:#020202}
+  .mapHeader{padding:12px 16px; display:flex; justify-content:space-between; align-items:center; color:var(--muted); background:rgba(255,255,255,0.01)}
+  #map{height:calc(100% - 52px)}
+
+  /* timeline */
+  .timeline{position:fixed; right:18px; bottom:18px; width:320px; background:rgba(8,8,10,0.9); padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); box-shadow:0 10px 40px rgba(0,0,0,0.6); transform:translateY(140%); transition:transform .4s}
+  .timeline.show{transform:translateY(0%)}
+  .timeline .step{padding:8px;border-radius:8px;margin-top:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01),transparent)}
+
+  /* small UI */
+  .badge{display:inline-block;padding:6px 10px;border-radius:999px;background:linear-gradient(90deg,#ffd46b,#ff8a65);color:#111;font-weight:800;margin-left:8px;font-size:13px}
+  #loading{display:none;margin:12px auto;border-radius:50%;width:44px;height:44px;border:6px solid rgba(255,255,255,0.06); border-top-color:var(--neon1); animation:spin .9s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* profile card canvas preview */
+  #profilePreview{width:100%;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:linear-gradient(180deg,rgba(0,0,0,0.25),rgba(255,255,255,0.02));padding:8px;text-align:center;margin-top:10px}
+
+  /* particle canvases */
+  #particles, #stars {position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:1;opacity:0.9}
+
+  /* responsiveness */
+  @media (max-width:1100px){
+    body{flex-direction:column;align-items:center;padding:12px}
+    #mapWrap{width:100%; height:520px}
+    .card{width:100%; max-width:760px}
   }
 </style>
 </head>
-<body>
+<body data-theme="dark">
 
-<div class="container">
-  <h2>Contact Us</h2>
-  <form id="contactForm">
-    <input type="text" name="name" placeholder="Your Name" required>
-    <input type="email" name="email" placeholder="Email Address" required>
-    <input type="text" name="city" placeholder="City">
-    <input type="text" name="country" placeholder="Country">
-    <textarea name="message" rows="5" placeholder="Your Message" required></textarea>
-    <button type="submit">Submit</button>
+<!-- particle canvases -->
+<canvas id="particles"></canvas>
+<canvas id="stars"></canvas>
+
+<!-- left card -->
+<div class="card" id="formCard" role="region" aria-label="Friendship Form">
+  <h1>Friendship Universe ❤️ <span class="muted">— share a memory</span></h1>
+  <div id="locationMsg" class="muted">Enable location to unlock map features & local stats</div>
+
+  <div style="margin-top:10px;display:flex;gap:8px">
+    <button id="detectBtn" class="btn btn-ghost small">📍 Detect my city</button>
+    <button id="themeToggle" class="btn btn-ghost small">🌗 Toggle Theme</button>
+    <button id="musicToggle" class="btn btn-ghost small">🔊 Music</button>
+  </div>
+
+  <form id="friendForm" style="margin-top:12px">
+    <div class="field"><input id="yourName" placeholder="Your name or nickname" required></div>
+    <div class="row"><input id="metAt" placeholder="Where did we meet?" required><input id="duration" placeholder="How long friends? e.g., 3 years" required></div>
+    <div class="field"><textarea id="feelings" placeholder="Write a memory or feelings..." required></textarea></div>
+
+    <div style="display:flex;gap:8px">
+      <button id="submitBtn" class="btn btn-primary" type="submit">Share memory ❤️</button>
+      <button id="shareBtn" type="button" class="btn btn-ghost">Share page</button>
+    </div>
+
+    <div id="loading"></div>
+
+    <div id="socialProof" class="socialProof">—</div>
+
+    <div id="scoreLine" class="muteline" style="margin-top:8px">Friendship score: <strong id="scoreVal">—</strong> <span id="badgeSlot"></span></div>
+
+    <!-- profile card preview & download -->
+    <div id="profilePreview" aria-hidden="false">
+      <canvas id="cardCanvas" width="380" height="160" style="max-width:100%"></canvas>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
+        <button id="downloadCard" class="btn btn-ghost small">Download Profile Card</button>
+        <div id="qrcode" style="background:#fff;padding:6px;border-radius:6px"></div>
+      </div>
+    </div>
   </form>
-  <p id="status"></p>
 </div>
 
-<script>
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz_Xu0Tqbfqt8Bbj3MDcSBBh_dXtxsZxoL1YHSIdtsl6mab3Z8Pj1b6HHBhjjdoe3VG/exec"; // Replace with your deployed Apps Script URL
+<!-- right map -->
+<div id="mapWrap">
+  <div class="mapHeader">
+    <div>
+      <strong>Friendship Map</strong>
+      <div id="mapSub" class="muteline">Live submissions & Universe view</div>
+    </div>
+    <div style="text-align:right">
+      <div class="muteline">Total memories: <strong id="totalCount">0</strong></div>
+      <div class="muteline">From your city: <strong id="cityCount">0</strong></div>
+    </div>
+  </div>
+  <div id="map"></div>
 
-document.getElementById("contactForm").addEventListener("submit", async function(e){
-  e.preventDefault();
-  const formData = new FormData(this);
-  const data = {};
-  formData.forEach((v, k) => data[k] = v);
+  <!-- small overlay controls -->
+  <div style="position:absolute;left:12px;top:12px;z-index:40">
+    <button id="recenterBtn" class="btn btn-ghost small">Recenter</button>
+    <button id="refreshBtn" class="btn btn-ghost small">Refresh</button>
+  </div>
+</div>
+
+<!-- Timeline -->
+<div id="timeline" class="timeline" aria-live="polite">
+  <h3>Memory Timeline</h3>
+  <div id="timelineContent"><div class="muteline">No recent activity</div></div>
+</div>
+
+<!-- Audio (background music) -->
+<audio id="bgMusic" loop crossorigin="anonymous">
+  <!-- Replace with your music URL or leave commented out to disable autoplay -->
+  <source src="MUSIC_URL_HERE" type="audio/mpeg">
+  Your browser doesn't support the audio element.
+</audio>
+
+<script>
+/* ======================
+   CONFIG - change these
+   ====================== */
+const G_SCRIPT = "YOUR_GOOGLE_SCRIPT_WEB_APP_URL"; // <<-- deploy URL (exec) from Apps Script
+const MUSIC_URL = "MUSIC_URL_HERE"; // replace or leave as-is (blank)
+const SITE_URL = window.location.href;
+
+/* ======================
+   UI refs & globals
+   ====================== */
+const detectBtn = document.getElementById('detectBtn');
+const locationMsg = document.getElementById('locationMsg');
+const socialProof = document.getElementById('socialProof');
+const scoreVal = document.getElementById('scoreVal');
+const badgeSlot = document.getElementById('badgeSlot');
+const loadingEl = document.getElementById('loading');
+const shareBtn = document.getElementById('shareBtn');
+const submitBtn = document.getElementById('submitBtn');
+const timelinePanel = document.getElementById('timeline');
+const timelineContent = document.getElementById('timelineContent');
+const totalCountEl = document.getElementById('totalCount');
+const cityCountEl = document.getElementById('cityCount');
+const cardCanvas = document.getElementById('cardCanvas');
+const downloadCard = document.getElementById('downloadCard');
+const qrcodeEl = document.getElementById('qrcode');
+const themeToggle = document.getElementById('themeToggle');
+const musicToggle = document.getElementById('musicToggle');
+const bgMusic = document.getElementById('bgMusic');
+
+let userLat="", userLon="", userCity="";
+let map, markersGroup;
+let universeOn = true;
+let submissionsCache = [];
+
+/* ======================
+   Map init (Leaflet)
+   ====================== */
+map = L.map('map', { zoomControl:true }).setView([20,0], 2);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'&copy; OpenStreetMap contributors' }).addTo(map);
+markersGroup = L.layerGroup().addTo(map);
+
+const glowIcon = L.divIcon({className:'', html:`<div style="width:12px;height:12px;border-radius:50%;background:radial-gradient(circle,#7bd0ff,#4ecf9a);box-shadow:0 0 10px rgba(123,208,255,0.6)"></div>`, iconSize:[12,12]});
+
+/* ======================
+   Small helpers
+   ====================== */
+function safeNum(n){const x=parseFloat(n);return isNaN(x)?0:x;}
+function escapeHtml(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function shorten(s,n=120){if(!s) return ''; return s.length>n? s.slice(0,n-1)+'…' : s;}
+function showLoading(v){loadingEl.style.display = v? 'block' : 'none';}
+
+/* ======================
+   Load submissions (GET)
+   ====================== */
+async function loadSubmissions(){
+  try{
+    const res = await fetch(`${G_SCRIPT}?mode=GET`);
+    const data = await res.json();
+    submissionsCache = data;
+    markersGroup.clearLayers();
+    let total=0, cityCount=0;
+    data.forEach(e=>{
+      total++;
+      const lat = safeNum(e.latitude), lon=safeNum(e.longitude);
+      const city = (e.city||'').toString();
+      if(userCity && city && city.toLowerCase() === userCity.toLowerCase()) cityCount++;
+      if(lat && lon){
+        const popupHtml = createPopupCard(e);
+        L.marker([lat,lon], {icon: glowIcon}).addTo(markersGroup).bindPopup(popupHtml,{maxWidth:320});
+      }
+    });
+    totalCountEl.textContent = total;
+    cityCountEl.textContent = cityCount;
+    if(userCity) socialProof.innerHTML = `🔥 <strong>${cityCount}</strong> friends from <strong>${escapeHtml(userCity)}</strong> have shared memories — add yours!`;
+    else socialProof.textContent = "Be the first from your city — allow location to see more!";
+    updateStarData(data);
+  }catch(err){
+    console.error("loadSubmissions failed", err);
+    socialProof.textContent = "Could not load live data. Check backend & CORS.";
+  }
+}
+
+/* ======================
+   Popup card (map)
+   ====================== */
+function createPopupCard(entry){
+  const name = escapeHtml(entry.name||'Anonymous');
+  const city = escapeHtml(entry.city || entry.met || '');
+  const feel = escapeHtml(entry.feelings||'');
+  const when = entry.timestamp? new Date(entry.timestamp).toLocaleString() : '';
+  return `<div style="width:260px;padding:10px;border-radius:12px;background:linear-gradient(180deg,#0b0b0d,#121214);color:#eaf7ee;border:1px solid rgba(123,208,255,0.06);box-shadow:0 8px 24px rgba(0,0,0,0.6)">
+    <div style="font-weight:800;color:var(--neon2);">${name}</div>
+    <div style="font-size:12px;color:var(--muted);margin:6px 0">${city} ${when? ' • '+when: ''}</div>
+    <div style="font-size:13px;color:#d9f7e6">${shorten(feel,220)}</div>
+    <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+      <button style="padding:6px 8px;border-radius:8px;border:none;background:linear-gradient(90deg,#ff8a65,#ffd46b);font-weight:800;cursor:pointer">❤️</button>
+      <button style="padding:6px 8px;border-radius:8px;border:none;background:rgba(255,255,255,0.03);color:var(--muted);cursor:pointer">😊</button>
+    </div>
+  </div>`;
+}
+
+/* ======================
+   Detect Location & reverse geocode
+   ====================== */
+async function detectLocation(showPrompt=true){
+  if(!navigator.geolocation){ locationMsg.textContent = "Geolocation not supported"; return; }
+  if(showPrompt) locationMsg.textContent = "Requesting location (browser prompt)…";
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    userLat = pos.coords.latitude; userLon = pos.coords.longitude;
+    locationMsg.textContent = "Thanks for allowing location! 🎉";
+    try{
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${userLat}&lon=${userLon}`);
+      const json = await r.json();
+      userCity = json.address.city || json.address.town || json.address.village || json.address.county || '';
+      if(userCity) locationMsg.innerHTML = `You're in <strong>${escapeHtml(userCity)}</strong>. Share your memory!`;
+      else locationMsg.textContent = "Location detected (city not found).";
+      const marker = L.marker([userLat,userLon], {icon: glowIcon}).addTo(markersGroup);
+      marker.bindPopup(`You are here: ${escapeHtml(userCity||'Your location')}`).openPopup();
+      map.setView([userLat,userLon], Math.max(5, userCity?6:4));
+      await loadSubmissions();
+    }catch(e){
+      console.warn("reverse failed", e);
+      locationMsg.textContent = "Location detected; reverse lookup failed.";
+    }
+  }, err=>{
+    console.warn(err);
+    locationMsg.textContent = "Location not enabled. You can still submit!";
+  }, { timeout:10000 });
+}
+
+/* ======================
+   Scoring / AI heuristics
+   ====================== */
+function computeScore(durationText, feelingsText){
+  // parse numeric time (prioritize years)
+  let years = 0;
+  if(durationText){
+    const txt = durationText.toLowerCase();
+    const m = txt.match(/(\d+(\.\d+)?)/);
+    if(m){ const n = parseFloat(m[1]); years = txt.includes('month')? n/12 : n; }
+    else { if(txt.includes('few')) years = 0.5; }
+  }
+  // length and positivity score
+  const lenScore = Math.min(20, (feelingsText||'').length / 5); // up to 20
+  const posWords = ['love','best','always','forever','amazing','great','awesome','closest','sweet','happy','care','cherish','grateful','thank'];
+  const negWords = ['hate','never','angry','sad','boring','bad','distant','left','lost'];
+  const low = (feelingsText||'').toLowerCase();
+  let pos=0, neg=0;
+  posWords.forEach(w=>{ if(low.includes(w)) pos++ });
+  negWords.forEach(w=>{ if(low.includes(w)) neg++ });
+  const sentiment = Math.max(0, pos - neg);
+  // final composite
+  let score = Math.round(Math.min(100, years*12 + lenScore + sentiment*8 + Math.min(15, pos*3)));
+  return {score, years, pos, neg};
+}
+function pickBadge(score, years){
+  if(score >= 85 || years >= 10) return "Legendary Friend";
+  if(score >= 65 || years >= 5) return "Golden Friend";
+  if(score >= 45 || years >= 2) return "Solid Buddy";
+  if(score >= 25) return "Nice Pal";
+  return "New Companion";
+}
+
+/* ======================
+   Form submit
+   ====================== */
+document.getElementById('friendForm').addEventListener('submit', async (ev)=>{
+  ev.preventDefault();
+  showLoading(true);
+
+  // pulse effect
+  submitBtn.classList.add('pulse');
+  setTimeout(()=> submitBtn.classList.remove('pulse'), 800);
+
+  const name = document.getElementById('yourName').value.trim();
+  const metAt = document.getElementById('metAt').value.trim();
+  const duration = document.getElementById('duration').value.trim();
+  const feelings = document.getElementById('feelings').value.trim();
+
+  // score & badge
+  const result = computeScore(duration, feelings);
+  scoreVal.textContent = result.score;
+  const badgeText = pickBadge(result.score, result.years);
+  badgeSlot.innerHTML = `<span class="badge">${escapeHtml(badgeText)}</span>`;
+
+  // timeline quick add
+  addTimelineEntry({name,metAt,duration,feelings,city:userCity,ts:new Date().toISOString()});
+
+  const payload = { name, met:metAt, duration, feelings, latitude: userLat, longitude: userLon, city: userCity, timestamp: new Date().toISOString() };
 
   try {
-    const response = await fetch(WEB_APP_URL, {
-      method: "POST",
-      body: JSON.stringify(data),
-      headers: { "Content-Type": "application/json" }
-    });
-    const result = await response.json();
-    if(result.status === "success"){
-      document.getElementById("status").innerText = "Thank you! Your message has been submitted.";
-      this.reset();
-    } else {
-      document.getElementById("status").innerText = "Error: " + result.message;
+    // POST JSON
+    await fetch(G_SCRIPT, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
+
+    // reload markers
+    await loadSubmissions();
+
+    // confetti
+    confetti({ particleCount: 180, spread: 70, origin: { y: 0.6 } });
+
+    // build profile card and QR
+    buildProfileCard({ name, metAt, duration, feelings, badge: badgeText });
+
+    showLoading(false);
+    // success microcopy
+    const successMsg = `Thanks ${name}! Your memory is live.`; 
+    alert(successMsg);
+  } catch(err){
+    console.error("submit error", err);
+    showLoading(false);
+    alert("Submit failed — check Apps Script and CORS.");
+  }
+
+  // reset form fields (keep city & starfield)
+  document.getElementById('friendForm').reset();
+});
+
+/* ======================
+   Timeline
+   ====================== */
+function addTimelineEntry(item){
+  const el = document.createElement('div');
+  el.className = 'step';
+  const when = new Date(item.ts).toLocaleString();
+  el.innerHTML = `<strong>${escapeHtml(item.name||'Anonymous')}</strong> — ${escapeHtml(item.metAt||item.city||'Unknown place')} <div class="muteline" style="margin-top:6px">${shorten(escapeHtml(item.feelings||''),120)}</div><div class="muteline" style="margin-top:6px;font-size:12px">${when}</div>`;
+  timelineContent.prepend(el);
+  timelinePanel.classList.add('show');
+  setTimeout(()=> timelinePanel.classList.remove('show'), 9000);
+}
+
+/* ======================
+   Starfield & particles (X-Factors)
+   ====================== */
+const starsCanvas = document.getElementById('stars'), sp = starsCanvas.getContext('2d');
+const particleCanvas = document.getElementById('particles'), pp = particleCanvas.getContext('2d');
+let W = innerWidth, H = innerHeight;
+function resizeCanvases(){ W = innerWidth; H = innerHeight; starsCanvas.width=W; starsCanvas.height=H; particleCanvas.width=W; particleCanvas.height=H; }
+window.addEventListener('resize', resizeCanvases);
+resizeCanvases();
+
+const particles = [];
+for(let i=0;i<80;i++) particles.push({x:Math.random()*W,y:Math.random()*H, vx:(Math.random()-0.5)*0.4, vy:(Math.random()-0.5)*0.4, r:Math.random()*2+0.6, life:Math.random()*100});
+
+let mouse={x:-9999,y:-9999}; window.addEventListener('mousemove', e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
+
+function drawParticles(){
+  pp.clearRect(0,0,W,H);
+  for(const p of particles){
+    p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+    const dx = mouse.x - p.x, dy = mouse.y - p.y, dist = Math.sqrt(dx*dx+dy*dy);
+    if(dist < 160 && dist>0){ p.x += dx*0.002; p.y += dy*0.002; }
+    if(p.x<0) p.x=W; if(p.x>W) p.x=0; if(p.y<0) p.y=H; if(p.y>H) p.y=0;
+    pp.beginPath(); pp.fillStyle='rgba(120,210,255,0.75)'; pp.globalAlpha = 0.25 + Math.abs(Math.sin(p.life))*0.75; pp.arc(p.x,p.y,p.r,0,Math.PI*2); pp.fill();
+  }
+  pp.globalAlpha=1;
+}
+
+let starData = [];
+function updateStarData(entries){
+  starData = [];
+  entries.forEach(e=>{
+    const lat = safeNum(e.latitude), lon = safeNum(e.longitude);
+    if(lat && lon){
+      try{
+        const point = map.latLngToContainerPoint([lat,lon]);
+        starData.push({x: point.x + (Math.random()*40-20), y: point.y + (Math.random()*40-20), size: 1+Math.random()*2, alpha: 0.8});
+      }catch(err){}
     }
-  } catch(err) {
-    document.getElementById("status").innerText = "Error: " + err.message;
+  });
+}
+
+function drawStars(){
+  sp.clearRect(0,0,W,H);
+  if(!universeOn) return;
+  // subtle scatter
+  for(let i=0;i<60;i++){ sp.beginPath(); const x=(i*137)%W, y=(i*97)%H; sp.globalAlpha=0.06; sp.fillStyle='#ffffff'; sp.arc(x,y,Math.random()*1.6,0,Math.PI*2); sp.fill(); }
+  // starData on map
+  starData.forEach(s=>{
+    const rect = map._container.getBoundingClientRect();
+    const vx = rect.left + s.x, vy = rect.top + s.y;
+    sp.beginPath(); sp.globalAlpha = s.alpha; sp.fillStyle = 'rgba(123,208,255,0.9)'; sp.arc(vx,vy,s.size*1.6,0,Math.PI*2); sp.fill();
+  });
+}
+
+(function animate(){ requestAnimationFrame(animate); drawParticles(); drawStars(); })();
+
+/* ======================
+   Star remapping on map move
+   ====================== */
+map.on('move zoom', ()=> loadSubmissions());
+
+/* ======================
+   Profile card generator (canvas)
+   ====================== */
+function buildProfileCard({name, metAt, duration, feelings, badge}){
+  const ctx = cardCanvas.getContext('2d');
+  // clear
+  ctx.clearRect(0,0,cardCanvas.width,cardCanvas.height);
+  // background
+  const g = ctx.createLinearGradient(0,0,cardCanvas.width,cardCanvas.height); g.addColorStop(0,'#071019'); g.addColorStop(1,'#07201a');
+  ctx.fillStyle = g; ctx.fillRect(0,0,cardCanvas.width,cardCanvas.height);
+  // neon border
+  ctx.strokeStyle = 'rgba(123,208,255,0.12)'; ctx.lineWidth = 2; roundRect(ctx,4,4,cardCanvas.width-8,cardCanvas.height-8,12); ctx.stroke();
+  // title
+  ctx.fillStyle = '#fff'; ctx.font = '18px Poppins,sans-serif'; ctx.fillText(name || 'Anonymous', 20, 36);
+  // badge
+  ctx.fillStyle = '#ffd46b'; ctx.font = '12px Poppins'; ctx.fillText(badge || '', cardCanvas.width - 120, 34);
+  // meta
+  ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.font = '12px Poppins'; ctx.fillText(metAt || '', 20, 64);
+  ctx.fillText(duration || '', 20, 82);
+  // feelings block
+  ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = '13px Poppins'; wrapText(ctx, feelings || '', 20, 110, cardCanvas.width - 40, 18);
+  // QR code small: create a dataURL for current page and render (we'll create a separate QR element)
+  // draw avatar circle
+  ctx.beginPath(); ctx.arc(cardCanvas.width - 50, 110, 28, 0, Math.PI*2); ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fill();
+}
+function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();}
+function wrapText(ctx, text, x, y, maxWidth, lineHeight){
+  const words = text.split(' ');
+  let line = '';
+  for(let n=0;n<words.length;n++){
+    const testLine = line + words[n] + ' ';
+    const metrics = ctx.measureText(testLine);
+    const testWidth = metrics.width;
+    if(testWidth > maxWidth && n>0){
+      ctx.fillText(line, x, y);
+      line = words[n] + ' ';
+      y += lineHeight;
+    } else {
+      line = testLine;
+    }
+  }
+  ctx.fillText(line, x, y);
+}
+// download card
+downloadCard.addEventListener('click', ()=>{
+  const url = cardCanvas.toDataURL('image/png');
+  const a = document.createElement('a'); a.href = url; a.download = 'friendship-card.png'; a.click();
+  // generate QR for the download link (dataURL -> we can show QR for page instead)
+  new QRCode(qrcodeEl, { text: SITE_URL, width: 96, height: 96 });
+});
+
+/* ======================
+   QR code for page share
+   ====================== */
+new QRCode(qrcodeEl, { text: SITE_URL, width: 96, height: 96 });
+
+/* ======================
+   Share Button
+   ====================== */
+shareBtn.addEventListener('click', async ()=>{
+  const text = "I just shared a friendship memory! Join the Friendship Universe:";
+  if(navigator.share){
+    navigator.share({ title:'Friendship Universe', text, url: SITE_URL }).catch(()=> window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + SITE_URL)}`));
+  } else {
+    window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + SITE_URL)}`);
   }
 });
-</script>
 
+/* ======================
+   Theme toggle (persist)
+   ====================== */
+function setTheme(theme){ document.body.setAttribute('data-theme', theme); localStorage.setItem('theme', theme); }
+themeToggle.addEventListener('click', ()=> setTheme(document.body.getAttribute('data-theme')==='dark' ? 'light' : 'dark'));
+const saved = localStorage.getItem('theme'); if(saved) setTheme(saved); else setTheme('dark');
+
+/* ======================
+   Music toggle (bg audio)
+   ====================== */
+if(MUSIC_URL && MUSIC_URL !== 'MUSIC_URL_HERE'){ bgMusic.src = MUSIC_URL; }
+musicToggle.addEventListener('click', ()=>{
+  if(bgMusic.paused){ bgMusic.play().catch(()=>{}); musicToggle.textContent = '🔈 Music On'; }
+  else { bgMusic.pause(); musicToggle.textContent = '🔇 Music Off'; }
+});
+
+/* ======================
+   Load initial data and polling
+   ====================== */
+loadSubmissions();
+setInterval(loadSubmissions, 20000);
+
+/* ======================
+   Utility helpers
+   ====================== */
+function showLoading(flag){ document.getElementById('loading').style.display = flag ? 'block' : 'none'; }
+document.getElementById('recenterBtn').addEventListener('click', ()=> map.setView([20,0],2));
+document.getElementById('refreshBtn').addEventListener('click', ()=> loadSubmissions());
+
+/* ======================
+   Initial small build of card
+   ====================== */
+buildProfileCard({ name:'Your Name', metAt:'Meeting place', duration:'X years', feelings:'Your memory here...', badge:'New Companion' });
+
+</script>
 </body>
 </html>
